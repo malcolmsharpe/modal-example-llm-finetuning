@@ -9,21 +9,21 @@ APP_NAME = "example-axolotl"
 MINUTES = 60  # seconds
 HOURS = 60 * MINUTES
 
-# Axolotl image hash corresponding to main-20240705-py3.11-cu121-2.3.0
+# Axolotl image hash corresponding to main-py3.11-cu121-2.3.1
 AXOLOTL_REGISTRY_SHA = (
-    "9578c47333bdcc9ad7318e54506b9adaf283161092ae780353d506f7a656590a"
+    "66e62f6ec3d3bb2a8471e830945aeae653cc624ae5c9307967ad84ada1e409ae"
 )
 
 ALLOW_WANDB = os.environ.get("ALLOW_WANDB", "false").lower() == "true"
 
 axolotl_image = (
-    modal.Image.from_registry(f"winglian/axolotl@sha256:{AXOLOTL_REGISTRY_SHA}")
+    modal.Image.from_registry(f"axolotlai/axolotl@sha256:{AXOLOTL_REGISTRY_SHA}")
     .pip_install(
-        "huggingface_hub==0.23.2",
-        "hf-transfer==0.1.5",
-        "wandb==0.16.3",
-        "fastapi==0.110.0",
-        "pydantic==2.6.3",
+        "huggingface_hub==0.26.2",
+        "hf-transfer==0.1.8",
+        "wandb==0.18.7",
+        "fastapi==0.115.5",
+        "pydantic==2.9.2",
     )
     .env(
         dict(
@@ -37,8 +37,11 @@ axolotl_image = (
 )
 
 vllm_image = (
-    modal.Image.from_registry("nvidia/cuda:12.1.0-base-ubuntu22.04", add_python="3.10")
-    .pip_install("vllm==0.5.1", "torch==2.3.0")
+    modal.Image.from_registry("nvidia/cuda:12.4.0-base-ubuntu22.04", add_python="3.11")
+    .pip_install(
+        "vllm==0.6.4.post1",
+        "torch==2.5.1",
+    )
     .entrypoint([])
 )
 
