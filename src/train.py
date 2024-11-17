@@ -39,6 +39,7 @@ def train(run_folder: str, output_dir: str):
     with open(f"{run_folder}/logs.txt", "a") as f:
         f.write(f"<br>merge: https://modal.com/logs/call/{merge_handle.object_id}\n")
         print(f"Beginning merge {merge_handle.object_id}.")
+    VOLUME_CONFIG["/runs"].commit()
     return merge_handle
 
 
@@ -68,17 +69,16 @@ def merge(run_folder: str, output_dir: str):
     output_path = Path(run_folder) / output_dir
     shutil.rmtree(output_path / "merged", ignore_errors=True)
 
-    with open(f"{run_folder}/config.yml"):
-        print(f"Merge from {output_path}")
+    print(f"Merge from {output_path}")
 
     MERGE_CMD = f"accelerate launch -m axolotl.cli.merge_lora ./config.yml --lora_model_dir='{output_dir}'"
     run_cmd(MERGE_CMD, run_folder)
 
-    VOLUME_CONFIG["/runs"].commit()
+    # Note: `run_cmd` committed the volume
 
 
 @app.function(image=axolotl_image, timeout=30 * MINUTES, volumes=VOLUME_CONFIG)
-def launch(config_raw: dict, data_raw: str, run_to_resume: str, preproc_only: bool):
+def launch(config_raw: str, data_raw: str, run_to_resume: str, preproc_only: bool):
     import yaml
     from huggingface_hub import snapshot_download
 
@@ -116,12 +116,11 @@ def launch(config_raw: dict, data_raw: str, run_to_resume: str, preproc_only: bo
         data_file.write(data_raw)
     VOLUME_CONFIG["/runs"].commit()
 
+    print("Spawning container for data preprocessing.")
+    preproc_handle = preproc_data.spawn(run_folder)
     if preproc_only:
-        print("Spawning container for data preprocessing.")
-        launch_handle = preproc_data.spawn(run_folder)
+        launch_handle = preproc_handle
     else:
-        print("Spawning container for data preprocessing.")
-        preproc_handle = preproc_data.spawn(run_folder)
         with open(f"{run_folder}/logs.txt", "w") as f:
             lbl = "preproc"
             f.write(f"{lbl}: https://modal.com/logs/call/{preproc_handle.object_id}")
@@ -144,7 +143,6 @@ def launch(config_raw: dict, data_raw: str, run_to_resume: str, preproc_only: bo
 def main(
     config: str,
     data: str,
-    merge_lora: bool = True,
     preproc_only: bool = False,
     run_to_resume: str = None,
 ):
@@ -160,7 +158,7 @@ def main(
 
     # Wait for the training run to finish.
     merge_handle = launch_handle.get()
-    if merge_lora and not preproc_only:
+    if merge_handle is not None:
         merge_handle.get()
 
     print(f"Run complete. Tag: {run_name}")

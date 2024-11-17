@@ -46,7 +46,7 @@ lora_modules_to_save: # required when adding new tokens to LLaMA/Mistral
   - embed_tokens
   - lm_head
 
-wandb_project:
+wandb_project: modal-example-sqlqa
 wandb_entity:
 wandb_watch:
 wandb_run_id:
